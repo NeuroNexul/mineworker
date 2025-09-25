@@ -1,3 +1,7 @@
+import fs from "fs";
+import * as p from "@clack/prompts";
+import { execSync } from "child_process";
+
 /**
  * Clears the last n lines from the terminal.
  * @param n The number of lines to clear.
@@ -38,5 +42,53 @@ export async function waitForEnter() {
     }
 
     stdin.on("data", func);
+  });
+}
+
+export function getServerConfig(worldPath: string, silent = false) {
+  const config_raw = fs.readFileSync(
+    `${worldPath}/mineworker_config.json`,
+    "utf-8"
+  );
+  let config: Record<string, any>;
+
+  try {
+    config = JSON.parse(config_raw);
+  } catch (error) {
+    !silent &&
+      p.cancel(
+        `Failed to parse configuration file "mineworker_config.json": ${error}`
+      );
+    return;
+  }
+
+  if (!config.serverType) {
+    !silent &&
+      p.cancel(
+        `Server Type is not specified in the configuration file. Please run the install command first.`
+      );
+    return;
+  }
+
+  return config;
+}
+
+/**
+ * Wait until a screen session with given name is gone.
+ */
+export function waitForScreenExit(sessionName: string, interval = 2000) {
+  return new Promise<void>((resolve) => {
+    const check = setInterval(() => {
+      try {
+        const output = execSync("screen -list").toString();
+        if (!output.includes(sessionName)) {
+          clearInterval(check);
+          resolve();
+        }
+      } catch {
+        clearInterval(check);
+        resolve();
+      }
+    }, interval);
   });
 }

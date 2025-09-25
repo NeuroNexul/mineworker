@@ -3,11 +3,14 @@ import boxen from "boxen";
 import chalk from "chalk";
 import * as p from "@clack/prompts";
 import { setup } from "./actions/setup";
-import { waitForEnter } from "./utils";
+import { getServerConfig, waitForEnter, waitForScreenExit } from "./utils";
 import { networkInterfaces } from "os";
 import { uploadWorldToDrive } from "./actions/upload";
 import path from "path";
 import { loadWorld } from "./actions/load";
+import { installServerJar } from "./actions/install";
+import { start } from "./actions/start";
+import { execSync, spawn } from "child_process";
 
 const $ = Bun.$;
 const startTime = new Date();
@@ -68,6 +71,17 @@ async function init() {
     .then((res) => res.text().trim().split("\n")[0] || "")
     .catch(() => "");
 
+  const config = getServerConfig(worldPath, true) || {};
+
+  let running_session =
+    await $`screen -ls | grep mineworker_${config.serverType}`
+      .quiet()
+      .then(
+        (res) =>
+          (res.text().split("\n")[0] || "").trim().replace(/\t/g, " ") || ""
+      )
+      .catch(() => "");
+
   /**
    * Logs the server information to the console.
    * This includes the Bun version, hostname, and server URL.
@@ -100,6 +114,12 @@ async function init() {
     `${chalk.yellow("Server PID:")} ${chalk.blueBright(process.pid)}`,
 
     "",
+    `${chalk.yellow("Server Type:")} ${chalk.blueBright(
+      config.serverType || "Not specified"
+    )}`,
+    `${chalk.yellow("Session:")} ${chalk.blueBright(
+      running_session || "Not running"
+    )}`,
     `Server Start Time: ${chalk.blueBright(
       startTime.toLocaleString("en-US", {
         timeZone: "UTC",
@@ -178,11 +198,11 @@ async function init() {
         label: "Install Server JAR",
         hint: "Install the Minecraft server JAR file",
       },
-      {
-        value: "create",
-        label: "Create Server",
-        hint: "Create a new Minecraft server",
-      },
+      // {
+      //   value: "create",
+      //   label: "Create Server",
+      //   hint: "Create a new Minecraft server",
+      // },
       {
         value: "start",
         label: "Start Server",
@@ -208,11 +228,11 @@ async function init() {
         label: "Open Console",
         hint: "Open the Minecraft server console",
       },
-      {
-        value: "logs",
-        label: "View Logs",
-        hint: "View the Minecraft server logs",
-      },
+      // {
+      //   value: "logs",
+      //   label: "View Logs",
+      //   hint: "View the Minecraft server logs",
+      // },
       { value: "exit", label: "Exit", hint: "Exit the Minecraft Worker Node" },
     ],
   });
@@ -236,29 +256,70 @@ async function init() {
       await init();
       break;
 
+    case "install":
+      await installServerJar(worldPath);
+      await waitForEnter();
+      await init();
+      break;
+
     case "create":
-      p.outro("Creating server...");
+      p.cancel("Server Creation is not supported yet :(");
       await waitForEnter();
       await init();
       break;
 
     case "start":
-      p.outro("Starting server...");
+      await start(worldPath);
       await waitForEnter();
       await init();
       break;
 
-    case "stop":
-      p.outro("Stopping server...");
-      await waitForEnter();
-      await init();
-      break;
+    case "stop": {
+      const s = p.spinner();
+      s.start("Stopping server...");
 
-    case "restart":
-      p.outro("Restarting server...");
+      try {
+        execSync(`screen -S mineworker_${config.serverType} -X stuff "stop\n"`);
+        await waitForScreenExit(`mineworker_${config.serverType}`);
+
+        s.stop("Server stopped successfully");
+        p.log.success("Server stopped successfully");
+      } catch (error) {
+        s.stop("Failed to stop server");
+        p.log.error(error instanceof Error ? error.message : "Unknown error");
+      }
+
       await waitForEnter();
       await init();
       break;
+    }
+
+    case "restart": {
+      // Restarting the server is a two-step process: stop and then start.
+
+      const s = p.spinner();
+      s.start("Restarting server...");
+
+      try {
+        s.message("Stopping server...");
+
+        execSync(`screen -S mineworker_${config.serverType} -X stuff "stop\n"`);
+        await waitForScreenExit(`mineworker_${config.serverType}`);
+
+        s.stop("Server stopped successfully");
+      } catch (error) {
+        s.stop("Failed to stop server");
+        p.log.error(error instanceof Error ? error.message : "Unknown error");
+        await waitForEnter();
+        await init();
+        return;
+      }
+
+      await start(worldPath);
+      await waitForEnter();
+      await init();
+      break;
+    }
 
     case "status":
       p.outro("Checking server status...");
@@ -267,13 +328,20 @@ async function init() {
       break;
 
     case "console":
-      p.outro("Opening console...");
-      await waitForEnter();
-      await init();
+      const proc = spawn("screen", ["-r", "mineworker_forge"], {
+        stdio: "inherit",
+      });
+
+      proc.on("exit", async (code) => {
+        p.log.info(`Screen session exited with code ${code}`);
+
+        await waitForEnter();
+        await init();
+      });
       break;
 
     case "logs":
-      p.outro("Viewing logs...");
+      p.cancel("Checking Logs is not supported yet :(");
       await waitForEnter();
       await init();
       break;
