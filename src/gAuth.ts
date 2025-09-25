@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import * as p from "@clack/prompts";
 import chalk from "chalk";
+import credentials from "../cred.json" assert { type: "json" };
 
 const SCOPES = [
   "https://www.googleapis.com/auth/drive",
@@ -11,7 +12,7 @@ const SCOPES = [
 ];
 const TOKEN_PATH = path.resolve(process.cwd(), "./token.json");
 const credential_path = path.resolve(process.cwd(), "./cred.json");
-const credentials = JSON.parse(fs.readFileSync(credential_path, "utf-8"));
+// const credentials = JSON.parse(fs.readFileSync(credential_path, "utf-8"));
 const { client_secret, client_id, redirect_uris } = credentials.installed;
 
 export async function getGoogleAuth() {

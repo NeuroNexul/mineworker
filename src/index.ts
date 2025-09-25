@@ -16,7 +16,7 @@ const $ = Bun.$;
 const startTime = new Date();
 const ipv4s = new Set<string>();
 const ipv6s = new Set<string>();
-const worldPath = path.resolve(process.cwd(), "../world");
+const worldPath = path.resolve(process.cwd(), "./world");
 
 Object.entries(networkInterfaces()).forEach(([, iface]) => {
   if (!iface) return;
