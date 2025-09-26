@@ -46,6 +46,10 @@ export async function waitForEnter() {
 }
 
 export function getServerConfig(worldPath: string, silent = false) {
+  const exist = fs.existsSync(worldPath);
+
+  if (!exist) return {};
+
   const config_raw = fs.readFileSync(
     `${worldPath}/mineworker_config.json`,
     "utf-8"

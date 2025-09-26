@@ -3,10 +3,11 @@ import chalk from "chalk";
 import * as p from "@clack/prompts";
 import { clearLastLines } from "../utils";
 import { spawn } from "child_process";
+import { client, ZONE_ID } from "../dns";
 
 let pass = "";
 
-export async function setup() {
+export async function setup(ip: string) {
   const s = p.spinner();
   p.log.step("Setting up the server...");
 
@@ -100,6 +101,69 @@ export async function setup() {
         );
         process.exit(1);
       }
+    }
+  }
+
+  if (ip) {
+    // Add DNS records for the server
+    s.start("Adding DNS records...");
+
+    try {
+      // Check if the record already exists
+      const records = await client.dns.records.list({
+        zone_id: ZONE_ID,
+      });
+
+      const existingRecord = records.result.find((record) => {
+        return record.name === "mc.nexul.in" && record.type === "A";
+      });
+
+      if (existingRecord) {
+        // If the record exists, update it
+        s.message("Updating existing DNS record...");
+
+        const res = await client.dns.records.edit(existingRecord.id, {
+          zone_id: ZONE_ID,
+          name: "mc",
+          ttl: 1,
+          type: "A",
+          content: ip,
+          proxied: false,
+        });
+
+        s.stop(chalk.greenBright("✓") + " DNS record updated successfully.");
+        p.note(
+          `DNS record updated successfully. You can access your server at: ${chalk.blueBright(
+            `mc.nexul.in`
+          )}`,
+          "Note: "
+        );
+      } else {
+        // If the record does not exist, create it
+        s.message("Creating new DNS record...");
+
+        const res = await client.dns.records.create({
+          zone_id: ZONE_ID,
+          name: "mc",
+          ttl: 1,
+          type: "A",
+          content: ip,
+          proxied: false,
+        });
+
+        s.stop(chalk.greenBright("✓") + " DNS record created successfully.");
+        p.note(
+          `DNS record created successfully. You can access your server at: ${chalk.blueBright(
+            `mc.nexul.in`
+          )}`,
+          "Note: "
+        );
+      }
+    } catch (error) {
+      s.stop("Failed to add DNS records. Please try again later.", 1);
+      p.log.error(
+        error instanceof Error ? error.message : "Unknown error occurred"
+      );
     }
   }
 

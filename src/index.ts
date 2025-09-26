@@ -239,7 +239,7 @@ async function init() {
 
   switch (action) {
     case "setup":
-      await setup();
+      await setup(ipv4s.values().next().value || "");
       await waitForEnter();
       await init();
       break;
