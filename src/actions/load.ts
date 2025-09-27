@@ -5,6 +5,7 @@ import { getGoogleAuth } from "../gAuth";
 import { google } from "googleapis";
 import type { drive_v3 } from "googleapis";
 import path from "path";
+import { config } from "../../config";
 
 export async function loadWorld(worldPath: string): Promise<void> {
   const s = p.spinner();
@@ -37,7 +38,7 @@ export async function loadWorld(worldPath: string): Promise<void> {
 
   const worlds = await drive.files
     .list({
-      q: `'1bRzcInRBJ58cEoiwK4MqceKeQ1BlX9kZ' in parents and trashed = false and mimeType = 'application/zip'`,
+      q: `'${config.gdrive.parent_id}' in parents and trashed = false and mimeType = 'application/zip'`,
       fields: "files(id, name, mimeType, modifiedTime, webViewLink, size)",
       orderBy: "modifiedTime desc",
     })

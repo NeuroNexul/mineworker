@@ -3,7 +3,12 @@ import boxen from "boxen";
 import chalk from "chalk";
 import * as p from "@clack/prompts";
 import { setup } from "./actions/setup";
-import { getServerConfig, waitForEnter, waitForScreenExit } from "./utils";
+import {
+  getPublicIp,
+  getServerConfig,
+  waitForEnter,
+  waitForScreenExit,
+} from "./utils";
 import { networkInterfaces } from "os";
 import { uploadWorldToDrive } from "./actions/upload";
 import path from "path";
@@ -16,7 +21,12 @@ const $ = Bun.$;
 const startTime = new Date();
 const ipv4s = new Set<string>();
 const ipv6s = new Set<string>();
-const worldPath = path.resolve(process.cwd(), "./world");
+const worldPath = path.resolve(process.cwd(), "../world");
+
+const pub_ip = await getPublicIp();
+if (pub_ip) {
+  ipv4s.add(pub_ip);
+}
 
 Object.entries(networkInterfaces()).forEach(([, iface]) => {
   if (!iface) return;

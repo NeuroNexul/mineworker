@@ -7,6 +7,7 @@ import { google } from "googleapis";
 import type { drive_v3 } from "googleapis";
 import { getGoogleAuth } from "../gAuth";
 import axios from "axios";
+import { config } from "../../config";
 
 export async function uploadWorldToDrive(worldPath: string): Promise<void> {
   const s = p.spinner();
@@ -121,7 +122,7 @@ export async function uploadWorldToDrive(worldPath: string): Promise<void> {
       "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable",
       {
         name: `${time}.zip`,
-        parents: ["1bRzcInRBJ58cEoiwK4MqceKeQ1BlX9kZ"],
+        parents: [config.gdrive.parent_id],
       },
       {
         headers: {

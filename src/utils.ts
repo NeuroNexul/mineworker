@@ -1,6 +1,7 @@
 import fs from "fs";
 import * as p from "@clack/prompts";
 import { execSync } from "child_process";
+import axios from "axios";
 
 /**
  * Clears the last n lines from the terminal.
@@ -11,14 +12,6 @@ export function clearLastLines(n: number) {
   // \x1B[J clears from the cursor to the end of the screen.
   process.stdout.write(`\x1B[${n}A\x1B[J`);
 }
-
-// export async function awaitForInput(prompt = "Press Enter key to continue...") {
-//   process.stdout.write(prompt);
-
-//   for await (const line of console) {
-//     break;
-//   }
-// }
 
 export async function waitForEnter() {
   process.stdout.write("Press Enter to continue...");
@@ -95,4 +88,14 @@ export function waitForScreenExit(sessionName: string, interval = 2000) {
       }
     }, interval);
   });
+}
+
+export async function getPublicIp() {
+  try {
+    const response = await axios.get("https://api.ipify.org?format=json");
+    return response.data.ip;
+  } catch (error) {
+    console.error("Error getting public IP:", error);
+    return null;
+  }
 }

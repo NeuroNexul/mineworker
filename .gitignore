@@ -41,3 +41,5 @@ token.json
 run.bat
 run.sh
 libraries
+mineworker
+config.ts
