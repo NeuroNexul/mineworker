@@ -16,6 +16,7 @@ import { loadWorld } from "./actions/load";
 import { installServerJar } from "./actions/install";
 import { start } from "./actions/start";
 import { execSync, spawn } from "child_process";
+import fs from "fs";
 
 const $ = Bun.$;
 const startTime = new Date();
@@ -81,16 +82,18 @@ async function init() {
     .then((res) => res.text().trim().split("\n")[0] || "")
     .catch(() => "");
 
-  const config = getServerConfig(worldPath, true) || {};
+  const world_exists = fs.existsSync(worldPath);
+  const config = getServerConfig(worldPath, true);
 
   let running_session =
-    await $`screen -ls | grep mineworker_${config.serverType}`
+    world_exists &&
+    (await $`screen -ls | grep mineworker_${config?.serverType}`
       .quiet()
       .then(
         (res) =>
           (res.text().split("\n")[0] || "").trim().replace(/\t/g, " ") || ""
       )
-      .catch(() => "");
+      .catch(() => ""));
 
   /**
    * Logs the server information to the console.
@@ -125,7 +128,7 @@ async function init() {
 
     "",
     `${chalk.yellow("Server Type:")} ${chalk.blueBright(
-      config.serverType || "Not specified"
+      config?.serverType || "Not specified"
     )}`,
     `${chalk.yellow("Session:")} ${chalk.blueBright(
       running_session || "Not running"
@@ -202,11 +205,13 @@ async function init() {
         value: "upload",
         label: "Upload World",
         hint: "Upload a Minecraft world to Google Drive",
+        disabled: !world_exists,
       },
       {
         value: "install",
         label: "Install Server JAR",
         hint: "Install the Minecraft server JAR file",
+        disabled: !world_exists,
       },
       // {
       //   value: "create",
@@ -217,26 +222,31 @@ async function init() {
         value: "start",
         label: "Start Server",
         hint: "Start the Minecraft server",
+        disabled: !world_exists || running_session || !config,
       },
       {
         value: "stop",
         label: "Stop Server",
         hint: "Stop the Minecraft server",
+        disabled: !world_exists || !running_session || !config,
       },
       {
         value: "restart",
         label: "Restart Server",
         hint: "Restart the Minecraft server",
+        disabled: !world_exists || !running_session || !config,
       },
       {
         value: "status",
         label: "Check Status",
         hint: "Check the status of the Minecraft server",
+        disabled: !world_exists || !running_session || !config,
       },
       {
         value: "console",
         label: "Open Console",
         hint: "Open the Minecraft server console",
+        disabled: !world_exists || !running_session || !config,
       },
       // {
       //   value: "logs",
@@ -244,7 +254,7 @@ async function init() {
       //   hint: "View the Minecraft server logs",
       // },
       { value: "exit", label: "Exit", hint: "Exit the Minecraft Worker Node" },
-    ],
+    ].filter((e) => !e.disabled),
   });
 
   switch (action) {
@@ -289,8 +299,12 @@ async function init() {
       s.start("Stopping server...");
 
       try {
-        execSync(`screen -S mineworker_${config.serverType} -X stuff "stop\n"`);
-        await waitForScreenExit(`mineworker_${config.serverType}`);
+        if (!!config) {
+          execSync(
+            `screen -S mineworker_${config.serverType} -X stuff "stop\n"`
+          );
+          await waitForScreenExit(`mineworker_${config.serverType}`);
+        }
 
         s.stop("Server stopped successfully");
         p.log.success("Server stopped successfully");
@@ -313,8 +327,12 @@ async function init() {
       try {
         s.message("Stopping server...");
 
-        execSync(`screen -S mineworker_${config.serverType} -X stuff "stop\n"`);
-        await waitForScreenExit(`mineworker_${config.serverType}`);
+        if (!!config) {
+          execSync(
+            `screen -S mineworker_${config.serverType} -X stuff "stop\n"`
+          );
+          await waitForScreenExit(`mineworker_${config.serverType}`);
+        }
 
         s.stop("Server stopped successfully");
       } catch (error) {

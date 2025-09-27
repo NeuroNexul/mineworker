@@ -41,7 +41,7 @@ export async function waitForEnter() {
 export function getServerConfig(worldPath: string, silent = false) {
   const exist = fs.existsSync(worldPath);
 
-  if (!exist) return {};
+  if (!exist) return null;
 
   const config_raw = fs.readFileSync(
     `${worldPath}/mineworker_config.json`,
@@ -56,7 +56,7 @@ export function getServerConfig(worldPath: string, silent = false) {
       p.cancel(
         `Failed to parse configuration file "mineworker_config.json": ${error}`
       );
-    return;
+    return null;
   }
 
   if (!config.serverType) {
@@ -64,7 +64,7 @@ export function getServerConfig(worldPath: string, silent = false) {
       p.cancel(
         `Server Type is not specified in the configuration file. Please run the install command first.`
       );
-    return;
+    return null;
   }
 
   return config;
